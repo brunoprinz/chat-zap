@@ -1,0 +1,5 @@
+{
+  "name": "Chat App",
+  "description": "A real-time chat application with AI integration and voice messages.",
+  "requestFramePermissions": ["microphone"]
+}

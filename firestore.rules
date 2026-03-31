@@ -1,0 +1,148 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - uid: string (required) - user's uid
+    //   - displayName: string (required) - user's name
+    //   - email: string (required) - user's email
+    //   - photoURL: string (optional) - avatar URL
+    //   - isOnline: boolean (optional) - online status
+    //   - lastSeen: timestamp (optional) - last active time
+    //   - themeColor: string (optional) - UI theme color
+    //   - backgroundUrl: string (optional) - chat background
+    //
+    // Collection: chats
+    // Document ID: chatId
+    // Fields:
+    //   - type: string (required) - 'direct' or 'group'
+    //   - name: string (optional) - group name
+    //   - photoURL: string (optional) - group avatar
+    //   - participants: list (required) - list of user uids
+    //   - lastMessage: string (optional) - preview of last message
+    //   - updatedAt: timestamp (required) - last activity
+    //   - isPublic: boolean (optional) - public group flag
+    //   - createdBy: string (optional) - creator uid
+    //
+    // Collection: chats/{chatId}/messages
+    // Document ID: messageId
+    // Fields:
+    //   - chatId: string (required) - parent chat id
+    //   - senderId: string (required) - sender uid
+    //   - text: string (optional) - message content
+    //   - type: string (required) - 'text', 'audio', 'image', 'file', 'nudge'
+    //   - fileUrl: string (optional) - attachment URL
+    //   - status: string (optional) - 'sent', 'delivered', 'read'
+    //   - createdAt: timestamp (required) - creation time
+    //   - readBy: list (optional) - list of uids who read it
+    //
+    // Collection: chats/{chatId}/typing
+    // Document ID: userId
+    // Fields:
+    //   - isTyping: boolean (required) - typing status
+    //   - updatedAt: timestamp (required) - last update
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isParticipant(chatId) {
+      return isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+    }
+
+    function isPublicChat(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId)).data.isPublic == true;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'displayName', 'email']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() < 100;
+    }
+
+    function isValidChat(data) {
+      return hasRequiredFields(['type', 'participants', 'updatedAt']) &&
+             data.type in ['direct', 'group'] &&
+             data.participants is list && data.participants.size() > 0 && data.participants.size() <= 100 &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return hasRequiredFields(['chatId', 'senderId', 'type', 'createdAt']) &&
+             data.chatId is string && data.chatId.size() > 0 &&
+             data.senderId is string && (data.senderId == request.auth.uid || data.senderId == 'ai_groq') &&
+             data.type in ['text', 'audio', 'image', 'file', 'nudge'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTyping(data) {
+      return hasRequiredFields(['isTyping', 'updatedAt']) &&
+             data.isTyping is bool &&
+             data.updatedAt is timestamp;
+    }
+
+    // Rules
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles to find people to chat with
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged();
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && uidNotModified();
+    }
+
+    match /chats/{chatId} {
+      // Participants or anyone if public can read
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants || resource.data.isPublic == true);
+      // Anyone authenticated can create a chat, must include themselves
+      allow create: if isAuthenticated() && isValidChat(request.resource.data) && (request.auth.uid in request.resource.data.participants);
+      // Only participants can update, OR anyone can join a public chat
+      allow update: if isAuthenticated() && ((request.auth.uid in resource.data.participants) || (resource.data.isPublic == true && request.auth.uid in request.resource.data.participants)) && isValidChat(request.resource.data);
+      // Creator can delete
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
+      
+      match /messages/{messageId} {
+        // Participants or anyone if public can read messages
+        allow read: if isParticipant(chatId) || isPublicChat(chatId);
+        // Participants can create messages
+        allow create: if isParticipant(chatId) && isValidMessage(request.resource.data);
+        // Participants can update messages (e.g., to mark as read or edit)
+        allow update: if isParticipant(chatId) && hasRequiredFields(['chatId', 'senderId', 'type', 'createdAt']);
+        // Sender can delete their own messages, or anyone can delete messages older than 15 days
+        allow delete: if isParticipant(chatId) && (resource.data.senderId == request.auth.uid || request.time > resource.data.createdAt + duration.value(15, 'd'));
+      }
+
+      match /typing/{userId} {
+        // Participants or anyone if public can read typing status
+        allow read: if isParticipant(chatId) || isPublicChat(chatId);
+        // Users can only update their own typing status, or ai_groq
+        allow create, update: if (isOwner(userId) || userId == 'ai_groq') && isParticipant(chatId) && isValidTyping(request.resource.data);
+      }
+    }
+  }
+}
