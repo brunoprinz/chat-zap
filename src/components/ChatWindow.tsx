@@ -1,7 +1,7 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, deleteDoc, getDocs, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, deleteDoc, getDocs, arrayUnion, limit } from 'firebase/firestore';
 import { Send, Paperclip, Mic, Square, Image as ImageIcon, BellRing, ArrowLeft, Smile, Check, CheckCheck, Download, Trash2, Edit2, MoreVertical, X, UserPlus } from 'lucide-react';
 import { formatTime } from '../lib/utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,16 +49,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     });
 
     // Fetch messages
-    const q = query(
-      collection(db, 'chats', chatId, 'messages'),
-      orderBy('createdAt', 'asc')
-    );
-  
-
     const unsubscribeMessages = onSnapshot(q, (snapshot) => {
       const now = new Date();
       const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
-
       const msgs: any[] = [];
       
       snapshot.docs.forEach(docSnap => {
@@ -66,7 +59,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         if (msg.createdAt) {
           const msgDate = msg.createdAt.toDate();
           if (msgDate < fifteenDaysAgo) {
-            // Delete message older than 15 days
             deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id)).catch(console.error);
           } else {
             msgs.push(msg);
@@ -75,9 +67,23 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           msgs.push(msg);
         }
       });
+
+      // --- INÍCIO DO CÓDIGO DO BERRANTE ---
+      if (msgs.length > 0) {
+        const lastMessage = msgs[msgs.length - 1];
+        // Se a última mensagem for 'nudge' e não for minha, toca o terror!
+        if (lastMessage.type === 'nudge' && lastMessage.senderId !== profile?.uid) {
+          const audio = new Audio('https://github.com/wetainment/nudge/raw/main/nudge.mp3');
+          audio.play().catch(e => console.log("Erro ao tocar som:", e));
+
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 500);
+        }
+      }
+      // --- FIM DO CÓDIGO DO BERRANTE ---
       
       setMessages(msgs);
-      scrollToBottom();
+    });
       
       // Mark as read
       msgs.forEach(msg => {
@@ -108,26 +114,21 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     };
   }, [chatId, profile]);
 
- // --- PROTOCOLO VIKING: CHAMAR ATENÇÃO (NUDGE) ---
- useEffect(() => {
-  if (messages.length > 0) {
-    const lastMsg = messages[messages.length - 1];
-    
-    // Se a última mensagem for 'nudge' e NÃO foi você quem mandou
-    if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) { 
-      
-      // 1. Toca o Hino Viking do seu GitHub
-      const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
-      audio.play().catch(e => console.log("Áudio bloqueado. Clique na tela!", e));
-      
-      // 2. Faz a tela tremer
-      setIsShaking(true);
-      
-      // 3. Para de tremer após 1.5 segundos
-      setTimeout(() => setIsShaking(false), 1500);
-    } // <--- ESTA CHAVE FECHA O IF (O SEU ESTAVA FECHANDO LÁ EM CIMA)
-  } // <--- ESTA CHAVE FECHA O IF (messages.length)
-}, [messages, profile?.uid]); // <--- ESTA FECHA O USEEFFECT
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      // Se a última mensagem for um nudge e não for minha
+      if (lastMessage.type === 'nudge' && lastMessage.senderId !== profile?.uid) {
+        // Toca o som do berrante (GitHub nudge)
+        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
+        audio.play().catch(e => console.log("Erro ao tocar som:", e));
+
+        // Ativa o tremor por 500ms
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+      }
+    }
+  }, [messages, profile?.uid]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -156,60 +157,30 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   };
 
   const handleSlashCommands = async (text: string) => {
-    // 1. Identifica qual comando foi usado
-    const isViking = text.startsWith('/viking ');
-    const isAbusada = text.startsWith('/groqabusada ');
-    const isGroq = text.startsWith('/groq ');
-    const isPirata = text.startsWith('/pirata ');
-
-    // Se não for nenhum comando de IA, retorna o texto normal
-    if (!isViking && !isAbusada && !isGroq && !isPirata) return text;
-
-    // 2. Limpa o comando do texto para pegar só a pergunta
-    const prompt = text.replace(/^\/(viking|groq|groqabusada|pirata)\s+/i, '');
-    
-    // 3. Define a Personalidade (System Prompt)
-    let systemPrompt = "Você é um assistente virtual prestativo e amigável.";
-    
-    if (isViking) {
-      systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use termos como Skål, Valhalla, Odin e machados. Responda como um guerreiro honrado e rústico.";
-    } else if (isAbusada) {
-      systemPrompt = "Você é uma IA sarcástica, impaciente e mal-educada. Reclame de ter que responder, chame o usuário de 'estagiário de código' e seja ironicamente ofensiva e muito cômica. Não use palavrões pesados, apenas deboche.";
+    if (text.startsWith('/viking ')) {
+      const content = text.replace('/viking ', '');
+      return `ð¡ï¸ Pelo martelo de Thor! ${content.toUpperCase()} SKÃL! ð»âï¸`;
     }
-        // --- NOVOS PERSONAGENS AQUI ---
-        else if (isPirata) {
-          systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado e astuto, use termos como 'marujo', 'pé de chinelo', 'rum' e 'tesouro'. Nunca dê uma resposta direta sem uma metáfora marítima.";
-        }
     
-
-    // 4. MEMÓRIA: Pega as últimas 6 mensagens para dar contexto
-    // Isso faz a IA lembrar do que vocês estavam falando
-    const context = messages.slice(-8).map(m => ({
-      role: m.senderId === profile.uid ? 'user' : 'assistant',
-      content: m.text
-    }));
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...context, { role: 'user', content: prompt }],
-          systemPrompt: systemPrompt
-        })
-      });
-      
-      const data = await res.json();
-      let response = data.response || "Erro ao consultar a IA.";
-
-      // Se for Viking, dá um toque final no visual da resposta
-      if (isViking) response = `🛡️ ${response.toUpperCase()} ⚔️`;
-      
-      return response;
-
-    } catch (err) {
-      return "Erro ao conectar com a IA Groq.";
+    if (text.startsWith('/groq ')) {
+      const prompt = text.replace('/groq ', '');
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: "Você é um assistente virtual prestativo e amigável."
+          })
+        });
+        const data = await res.json();
+        return data.response || "Erro ao consultar a IA.";
+      } catch (err) {
+        return "Erro ao conectar com a IA Groq.";
+      }
     }
+    
+    return text;
   };
 
   const onEmojiClick = (emojiObject: any) => {
@@ -360,30 +331,46 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!inviteEmail.trim()) return;
 
     try {
-      const q = query(collection(db, 'users'), where('email', '==', inviteEmail.trim()));
-      const snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        const targetUser = snapshot.docs[0].data();
+      const q = query(
+        collection(db, 'chats', chatId, 'messages'),
+        orderBy('createdAt', 'asc')
+      );
+  
+      const unsubscribeMessages = onSnapshot(q, (snapshot) => {
+        const now = new Date();
+        const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
+        const msgs: any[] = [];
         
-        if (chatInfo?.participants?.includes(targetUser.uid)) {
-          setInviteError("Usuário já está no grupo.");
-          return;
-        }
-
-        await updateDoc(doc(db, 'chats', chatId), {
-          participants: arrayUnion(targetUser.uid)
+        snapshot.docs.forEach(docSnap => {
+          const msg = { id: docSnap.id, ...docSnap.data() } as any;
+          if (msg.createdAt) {
+            const msgDate = msg.createdAt.toDate();
+            if (msgDate < fifteenDaysAgo) {
+              deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id)).catch(console.error);
+            } else {
+              msgs.push(msg);
+            }
+          } else {
+            msgs.push(msg);
+          }
         });
+  
+        // 🔥 LÓGICA DO BERRANTE (Som e Tremor)
+        if (msgs.length > 0) {
+          const lastMessage = msgs[msgs.length - 1];
+          // Se a última mensagem for um nudge e não for enviada por você
+          if (lastMessage.type === 'nudge' && lastMessage.senderId !== profile?.uid) {
+            const audio = new Audio('https://github.com/wetainment/nudge/raw/main/nudge.mp3');
+            audio.play().catch(e => console.log("Erro ao tocar som:", e));
+  
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 500);
+          }
+        }
         
-        setShowInviteModal(false);
-        setInviteEmail('');
-      } else {
-        setInviteError("Usuário não encontrado.");
-      }
-    } catch (err) {
-      setInviteError("Erro ao convidar usuário.");
-    }
-  };
+        setMessages(msgs);
+        scrollToBottom();
+      });
 
   const handleDeleteGroup = async () => {
     if (!chatInfo || !profile) return;
@@ -401,9 +388,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     }
   };
 
-  const playNudgeSound = () => {
-    const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
-    audio.play().catch(e => console.log('Audio play failed', e));
+  //const playNudgeSound = () => {
+   // const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
+    //audio.play().catch(e => console.log('Audio play failed', e));
     
     // Shake effect
     const chatContainer = document.getElementById('chat-container');
@@ -593,7 +580,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   };
 
   return (
-    <div id="chat-container" className={`flex flex-col h-full bg-[#efeae2] relative transition-all duration-75 ${isShaking ? 'animate-shake' : ''}`}>
+    <div id="chat-container" className="flex flex-col h-full bg-[#efeae2] relative transition-transform duration-75">
       {error && (
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md z-50 shadow-md">
           {error}
@@ -614,12 +601,13 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           <p className="text-xs text-emerald-600">
             {otherTyping ? 'digitando...' : (chatInfo?.isOnline ? 'online' : '')}
           </p>
-        </div>
+        {/* Link do Drive no Header */}
+<a href="https://drive.google.com" target="_blank" rel="noopener noreferrer" className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors" title="Abrir Google Drive">
+          <Download size={20} />
+        </a>
+      </div>
 
-        {/* Ícone do Google Drive Estratégico */}
-        <div className="flex items-center gap-1">
-          <a href="https://drive.google.com" target="_blank" rel="noreferrer" className="p-2 hover:bg-gray-200 rounded-full transition-colors flex items-center justify-center" title="Abrir Google Drive para arquivos pesados">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" className="w-5 h-5 opacity-80 hover:opacity-100"  alt="Drive"/></a>
+
 
         <div className="flex items-center gap-2 relative">
           <button onClick={exportChatToHTML} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Exportar Chat (HTML)">
@@ -710,12 +698,15 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{
-        backgroundImage: profile?.backgroundUrl ? `url(${profile.backgroundUrl})` : 'none',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      }}>
+      {/* Messages Area com Suporte a Tremor */}
+      <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isShaking ? 'animate-shake' : ''}`} 
+        style={{
+          backgroundImage: profile?.backgroundUrl ? `url(${profile.backgroundUrl})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
         {messages.map((msg, index) => {
           const isMe = msg.senderId === profile?.uid;
           const showDate = index === 0 || new Date(msg.createdAt?.toDate()).getDate() !== new Date(messages[index - 1].createdAt?.toDate()).getDate();
@@ -815,7 +806,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
             type="text"
             value={newMessage}
             onChange={handleTyping}
-            placeholder="Digite uma mensagem (use /groq para IA, /viking /groqabusada/pirata)"
+            placeholder="Digite uma mensagem (use /groq para IA, /viking para magia)"
             className="flex-1 bg-transparent border-none outline-none py-2 text-sm text-gray-800"
           />
         </form>
@@ -835,9 +826,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         title={recording ? "Clique para parar e enviar" : "Clique para gravar"}
       >
         {recording ? <Square size={20} fill="white" /> : <Mic size={20} />}
-        </button>
-      )}
-    </div> 
-  </div> 
- );
+      </button>
+        )}
+      </div>
+    </div>
+  );
 }
