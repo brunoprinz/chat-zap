@@ -618,15 +618,8 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
 
         {/* Ícone do Google Drive Estratégico */}
         <div className="flex items-center gap-1">
-          <a href="https://drive.google.com" 
-            target="_blank" 
-            rel="noreferrer"
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors flex items-center justify-center"
-            title="Abrir Google Drive para arquivos pesados">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" 
-              className="w-5 h-5 opacity-80 hover:opacity-100" 
-              alt="Drive"/></a>
+          <a href="https://drive.google.com" target="_blank" rel="noreferrer" className="p-2 hover:bg-gray-200 rounded-full transition-colors flex items-center justify-center" title="Abrir Google Drive para arquivos pesados">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" className="w-5 h-5 opacity-80 hover:opacity-100"  alt="Drive"/></a>
 
         <div className="flex items-center gap-2 relative">
           <button onClick={exportChatToHTML} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Exportar Chat (HTML)">
@@ -842,10 +835,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         title={recording ? "Clique para parar e enviar" : "Clique para gravar"}
       >
         {recording ? <Square size={20} fill="white" /> : <Mic size={20} />}
-      </button>
-)}
-</div> 
-</div> 
-</div> 
-);
+        </button>
+      )}
+    </div> 
+  </div> 
+ );
 }
