@@ -31,7 +31,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   const [inviteError, setInviteError] = useState('');
   const [showDeleteMessageModal, setShowDeleteMessageModal] = useState(false);
   const [messageToDeleteId, setMessageToDeleteId] = useState<string | null>(null);
-  const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     if (!chatId || !profile) return;
@@ -49,9 +48,15 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     });
 
     // Fetch messages
+    const q = query(
+      collection(db, 'chats', chatId, 'messages'),
+      orderBy('createdAt', 'asc')
+    );
+
     const unsubscribeMessages = onSnapshot(q, (snapshot) => {
       const now = new Date();
       const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
+
       const msgs: any[] = [];
       
       snapshot.docs.forEach(docSnap => {
@@ -59,6 +64,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         if (msg.createdAt) {
           const msgDate = msg.createdAt.toDate();
           if (msgDate < fifteenDaysAgo) {
+            // Delete message older than 15 days
             deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id)).catch(console.error);
           } else {
             msgs.push(msg);
@@ -67,22 +73,38 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           msgs.push(msg);
         }
       });
+      
+      setMessages(msgs);
+      scrollToBottom();
+      
+      // Mark as read
+      msgs.forEach(msg => {
+        if (msg.senderId !== profile.uid && msg.status !== 'read') {
+          updateDoc(doc(db, 'chats', chatId, 'messages', msg.id), {
+            status: 'read',
+            readBy: [...(msg.readBy || []), profile.uid]
+          });
+        }
+      });
+    });
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      // Se a última mensagem for um nudge e não for minha
-      if (lastMessage.type === 'nudge' && lastMessage.senderId !== profile?.uid) {
-        // Toca o som do berrante (GitHub nudge)
-        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
-        audio.play().catch(e => console.log("Erro ao tocar som:", e));
+    // Listen for typing indicators
+    const typingQ = query(
+      collection(db, 'chats', chatId, 'typing'),
+      where('isTyping', '==', true)
+    );
+    
+    const unsubscribeTyping = onSnapshot(typingQ, (snapshot) => {
+      const typers = snapshot.docs.filter(d => d.id !== profile.uid);
+      setOtherTyping(typers.length > 0);
+    });
 
-        // Ativa o tremor por 500ms
-        setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 500);
-      }
-    }
-  }, [messages, profile?.uid]);
+    return () => {
+      unsubscribeChat();
+      unsubscribeMessages();
+      unsubscribeTyping();
+    };
+  }, [chatId, profile]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -198,7 +220,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       updatedAt: serverTimestamp()
     });
 
-   
+    if (type === 'nudge') {
+      playNudgeSound();
+    }
 
     if (isAiCommand) {
       setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
@@ -285,27 +309,30 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!inviteEmail.trim()) return;
 
     try {
-      // 2. Definição da Query (O que o VS Code está pedindo)
-    const q = query(
-      collection(db, 'chats', chatId, 'messages'),
-      orderBy('createdAt', 'asc')
-    );
-
-    // 3. Escuta Mensagens (Com faxina e Berrante)
-    const unsubscribeMessages = onSnapshot(q, (snapshot) => {
-      const now = new Date();
-      const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
-      const msgs: any[] = [];
+      const q = query(collection(db, 'users'), where('email', '==', inviteEmail.trim()));
+      const snapshot = await getDocs(q);
       
-      setMessages(msgs);
-      setTimeout(scrollToBottom, 100);
-    });
+      if (!snapshot.empty) {
+        const targetUser = snapshot.docs[0].data();
+        
+        if (chatInfo?.participants?.includes(targetUser.uid)) {
+          setInviteError("Usuário já está no grupo.");
+          return;
+        }
 
-    return () => {
-      unsubscribeChat();
-      unsubscribeMessages();
-    };
-  }, [chatId, profile?.uid]);
+        await updateDoc(doc(db, 'chats', chatId), {
+          participants: arrayUnion(targetUser.uid)
+        });
+        
+        setShowInviteModal(false);
+        setInviteEmail('');
+      } else {
+        setInviteError("Usuário não encontrado.");
+      }
+    } catch (err) {
+      setInviteError("Erro ao convidar usuário.");
+    }
+  };
 
   const handleDeleteGroup = async () => {
     if (!chatInfo || !profile) return;
@@ -320,6 +347,18 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       onBack();
     } catch (err) {
       setDeleteGroupError("Erro ao excluir grupo.");
+    }
+  };
+
+  const playNudgeSound = () => {
+    const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
+    audio.play().catch(e => console.log('Audio play failed', e));
+    
+    // Shake effect
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
+      chatContainer.classList.add('animate-shake');
+      setTimeout(() => chatContainer.classList.remove('animate-shake'), 500);
     }
   };
 
@@ -524,14 +563,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           <p className="text-xs text-emerald-600">
             {otherTyping ? 'digitando...' : (chatInfo?.isOnline ? 'online' : '')}
           </p>
-        {/* Link do Drive no Header */}
-<a href="https://drive.google.com" target="_blank" rel="noopener noreferrer" className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors" title="Abrir Google Drive">
-          <Download size={20} />
-        </a>
-      </div>
-
-
-
+        </div>
         <div className="flex items-center gap-2 relative">
           <button onClick={exportChatToHTML} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Exportar Chat (HTML)">
             <Download size={20} />
@@ -621,15 +653,12 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       )}
 
       {/* Messages Area */}
-      {/* Messages Area com Suporte a Tremor */}
-      <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isShaking ? 'animate-shake' : ''}`} 
-        style={{
-          backgroundImage: profile?.backgroundUrl ? `url(${profile.backgroundUrl})` : 'none',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed'
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{
+        backgroundImage: profile?.backgroundUrl ? `url(${profile.backgroundUrl})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}>
         {messages.map((msg, index) => {
           const isMe = msg.senderId === profile?.uid;
           const showDate = index === 0 || new Date(msg.createdAt?.toDate()).getDate() !== new Date(messages[index - 1].createdAt?.toDate()).getDate();
