@@ -31,6 +31,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   const [inviteError, setInviteError] = useState('');
   const [showDeleteMessageModal, setShowDeleteMessageModal] = useState(false);
   const [messageToDeleteId, setMessageToDeleteId] = useState<string | null>(null);
+  const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     if (!chatId || !profile) return;
@@ -105,6 +106,23 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       unsubscribeTyping();
     };
   }, [chatId, profile]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      
+      // Se a mensagem for um Nudge e NÃO for minha
+      if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile.uid) {
+        // LINK DO SEU GITHUB AQUI
+        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
+        audio.play().catch(e => console.log("Erro ao tocar audio:", e));
+        
+        // Faz a tela tremer
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 800);
+      }
+    }
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
