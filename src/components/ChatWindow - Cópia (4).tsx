@@ -367,46 +367,29 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!file) return;
 
     // Se for menor que 1MB, mantemos o sistema atual para ser instantâneo
-    // Se for pequeno, mantém o envio rápido via Firebase (Base64)
     if (file.size <= 1048576) {
       const reader = new FileReader();
       reader.onloadend = () => {
         sendMessage(undefined, type, reader.result as string);
       };
       reader.readAsDataURL(file);
-    } 
-    // PROTOCOLO DRIVE: Para ficheiros maiores que 1MB
-    else {
-      setError(`Ficheiro de ${(file.size / 1024 / 1024).toFixed(1)}MB detetado. Enviando para o Drive...`);
+    } else {
+      // PROTOCOLO DRIVE: Para ficheiros até 10MB
+      setError(`Ficheiro de ${(file.size / 1024 / 1024).toFixed(1)}MB detetado. A iniciar upload para o Drive...`);
       
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // Chamada para a sua nova Function no Cloudflare
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) throw new Error('Falha no servidor');
-
-        const data = await response.json();
+        // Aqui chamaremos a função que vamos criar com a tua chave JSON
+        // Por agora, apenas preparamos o terreno
+        console.log("Iniciando upload pesado para o Drive...");
         
-        if (data.fileUrl) {
-          // Envia o link do Google Drive para o Chat
-          sendMessage(undefined, 'file', data.fileUrl);
-          setError(""); 
-        }
+        // TODO: Implementar a chamada ao backend/cloud function
       } catch (err) {
-        console.error("Erro no Drive:", err);
-        setError("Erro no upload para o Drive. Tente novamente.");
+        setError("Erro no upload para o Drive. Tenta um ficheiro menor.");
       }
       
-   // ... seu código do catch anterior
-   setTimeout(() => setError(''), 4000);
-  }
-}; // <--- ESSA CHAVE FECHA A FUNÇÃO handleFileUpload
+      setTimeout(() => setError(''), 4000);
+    }
+  };
 
   const startRecording = async () => {
     try {
@@ -514,7 +497,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
             if (msg.type === 'image') content = '<img src="' + msg.fileUrl + '" alt="Imagem" />';
             if (msg.type === 'audio') content = '<p>[Áudio]</p>';
             if (msg.type === 'nudge') content = '<p style="color: red; font-weight: bold;">[CHAMOU ATENÇÃO]</p>';
-            if (msg.type === 'file') content = '<div style="display: flex; align-items: center; gap: 8px; background: #f3f4f6; padding: 8px; border-radius: 8px; border: 1px solid #e5e7eb;"><span style="font-size: 20px;">📁</span> <p style="margin: 0; font-size: 14px; color: #374151;">Anexo enviado</p> <a href="' + msg.fileUrl + '" target="_blank" style="color: #059669; font-weight: bold; text-decoration: none;">Download</a></div>';
             
             return `
               <div class="message ${isMe ? 'me' : 'other'}">
