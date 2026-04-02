@@ -843,8 +843,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       >
         {recording ? <Square size={20} fill="white" /> : <Mic size={20} />}
       </button>
-        )}
-      </div>
-    </div>
-  );
+)}
+</div> 
+</div> 
+</div> 
+);
 }
