@@ -231,7 +231,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     let isAiCommand = false;
     
     if (type === 'text') {
-      if (newMessage.startsWith('/viking ')) { // O comando simples de texto
+      if (newMessage.startsWith('/viking ')) {
         const content = newMessage.replace(/^\/viking\s*/, '');
         finalMessage = '🛡️ PELO MARTELO DE THOR! ' + content.toUpperCase() + ' SKÅL! 🍺⚔️';
       } else if (newMessage.startsWith('/clipe')) {
@@ -259,6 +259,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       readBy: []
     };
 
+    // Envia a mensagem do usuário
     await addDoc(collection(db, 'chats', chatId, 'messages'), msgData);
     
     await updateDoc(doc(db, 'chats', chatId), {
@@ -269,7 +270,9 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     setNewMessage('');
     setShowEmojiPicker(false);
     setIsTyping(false);
-    setDoc(doc(db, 'chats', chatId, 'typing', profile.uid), {
+    
+    // Atualiza status de digitação do usuário
+    await setDoc(doc(db, 'chats', chatId, 'typing', profile.uid), {
       isTyping: false,
       updatedAt: serverTimestamp()
     });
@@ -278,31 +281,30 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       playNudgeSound();
     }
 
+    // LÓGICA DA IA (Se for um comando)
     if (isAiCommand) {
-      setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
+      // 1. Status de "IA digitando..."
+      await setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
         isTyping: true,
         updatedAt: serverTimestamp()
       });
 
-      // 1. Identifica o Personagem e limpa o Prompt
       const isVickingAI = newMessage.startsWith('/vicking') || newMessage.startsWith('/thor');
       const isAbusada = newMessage.startsWith('/abusada');
       const isPirata = newMessage.startsWith('/pirata');
       const prompt = newMessage.replace(/^\/(groq|vicking|abusada|pirata|thor)\s*/i, '');
 
-      // 2. Define a Personalidade
-      let systemPrompt = "Você é um assistente virtual prestativo e amigável.";
-      if (isVickingAI) systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use termos como Skål e Valhalla. Responda como um guerreiro rústico.";
-      else if (isAbusada) systemPrompt = "Você é uma IA sarcástica e debochada. Chame o usuário de estagiário, reclame de trabalhar e seja ironicamente engraçada.";
-      else if (isPirata) systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado, use 'marujo', 'rum' e 'tesouro'.";
+      let systemPrompt = "Você é um assistente virtual prestativo.";
+      if (isVickingAI) systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use Skål e Valhalla.";
+      else if (isAbusada) systemPrompt = "Você é uma IA sarcástica e debochada. Chame o usuário de estagiário.";
+      else if (isPirata) systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado.";
 
-      // 3. MEMÓRIA: Pega as últimas 6 mensagens para a IA saber do que vocês estão falando
+      // Pega as últimas 6 mensagens para a memória
       const context = messages.slice(-6).map(m => ({
         role: m.senderId === profile.uid ? 'user' : 'assistant',
         content: m.text
       }));
 
-      let aiText = "";
       try {
         const apiKey = import.meta.env.VITE_GROQ_API_KEY; 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -322,38 +324,37 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         });
 
         const data = await response.json();
-        aiText = data.choices[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
+        let aiText = data.choices[0]?.message?.content || "Desculpe, não consegui resposta.";
         
-        // Estilização Visual
         if (isVickingAI) aiText = `🛡️ ${aiText.toUpperCase()} ⚔️`;
         if (isPirata) aiText = `🏴‍☠️ ARRR! ${aiText} 🦜`;
 
+        // Envia a resposta da IA para o Firebase
+        await addDoc(collection(db, 'chats', chatId, 'messages'), {
+          chatId,
+          senderId: 'ai_groq',
+          text: aiText,
+          type: 'text',
+          status: 'sent',
+          createdAt: serverTimestamp(),
+          readBy: []
+        });
+
+        // Atualiza o último recado do chat com a fala da IA
+        await updateDoc(doc(db, 'chats', chatId), {
+          lastMessage: aiText,
+          updatedAt: serverTimestamp()
+        });
+
       } catch (err) {
         console.error("AI Error:", err);
-        aiText = "Erro ao conectar com a IA da Groq.";
+      } finally {
+        // Remove o status de "IA digitando..."
+        await setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
+          isTyping: false,
+          updatedAt: serverTimestamp()
+        });
       }
-
-      setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
-        isTyping: false,
-        updatedAt: serverTimestamp()
-      });
-
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
-        chatId,
-        senderId: 'ai_groq',
-        text: aiText,
-        type: 'text',
-        status: 'sent',
-        createdAt: serverTimestamp(),
-        readBy: []
-      });
-    }
-  };
-
-      await updateDoc(doc(db, 'chats', chatId), {
-        lastMessage: aiText,
-        updatedAt: serverTimestamp()
-      });
     }
   };
 
