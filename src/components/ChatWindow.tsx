@@ -285,46 +285,46 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!inviteEmail.trim()) return;
 
     try {
-      const q = query(
-        collection(db, 'chats', chatId, 'messages'),
-        orderBy('createdAt', 'asc')
-      );
-  
-      const unsubscribeMessages = onSnapshot(q, (snapshot) => {
-        const now = new Date();
-        const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
-        const msgs: any[] = [];
-        
-        snapshot.docs.forEach(docSnap => {
-          const msg = { id: docSnap.id, ...docSnap.data() } as any;
-          if (msg.createdAt) {
-            const msgDate = msg.createdAt.toDate();
-            if (msgDate < fifteenDaysAgo) {
-              deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id)).catch(console.error);
-            } else {
-              msgs.push(msg);
-            }
+      // 2. Definição da Query (O que o VS Code está pedindo)
+    const q = query(
+      collection(db, 'chats', chatId, 'messages'),
+      orderBy('createdAt', 'asc')
+    );
+
+    // 3. Escuta Mensagens (Com faxina e Berrante)
+    const unsubscribeMessages = onSnapshot(q, (snapshot) => {
+      const now = new Date();
+      const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
+      const msgs: any[] = [];
+      
+      snapshot.docs.forEach(docSnap => {
+        const msg = { id: docSnap.id, ...docSnap.data() } as any;
+        if (msg.createdAt) {
+          const msgDate = msg.createdAt.toDate();
+          if (msgDate < fifteenDaysAgo) {
+            deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id)).catch(console.error);
           } else {
             msgs.push(msg);
           }
-        });
-  
-        // 🔥 LÓGICA DO BERRANTE (Som e Tremor)
-        if (msgs.length > 0) {
-          const lastMessage = msgs[msgs.length - 1];
-          // Se a última mensagem for um nudge e não for enviada por você
-          if (lastMessage.type === 'nudge' && lastMessage.senderId !== profile?.uid) {
-            const audio = new Audio('https://github.com/wetainment/nudge/raw/main/nudge.mp3');
-            audio.play().catch(e => console.log("Erro ao tocar som:", e));
-  
-            setIsShaking(true);
-            setTimeout(() => setIsShaking(false), 500);
-          }
+        } else {
+          msgs.push(msg);
         }
-        
-        setMessages(msgs);
-        scrollToBottom();
       });
+
+      // Lógica do Berrante
+      if (msgs.length > 0) {
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
+          const audio = new Audio('https://github.com/wetainment/nudge/raw/main/nudge.mp3');
+          audio.play().catch(() => {});
+          setIsShaking(true);
+          setTimeout(() => setIsShaking(false), 500);
+        }
+      }
+
+      setMessages(msgs);
+      setTimeout(scrollToBottom, 100);
+    });
 
   const handleDeleteGroup = async () => {
     if (!chatInfo || !profile) return;
