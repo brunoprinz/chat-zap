@@ -2,7 +2,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, deleteDoc, getDocs, arrayUnion } from 'firebase/firestore';
-import { Send, Paperclip, Mic, Image as ImageIcon, BellRing, ArrowLeft, Smile, Check, CheckCheck, Download, Trash2, Edit2, MoreVertical, X, UserPlus } from 'lucide-react';
+import { Send, Paperclip, Mic, Square, Image as ImageIcon, BellRing, ArrowLeft, Smile, Check, CheckCheck, Download, Trash2, Edit2, MoreVertical, X, UserPlus } from 'lucide-react';
 import { formatTime } from '../lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import EmojiPicker from 'emoji-picker-react';
