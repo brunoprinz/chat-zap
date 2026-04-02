@@ -362,33 +362,22 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'file') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'file') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Se for menor que 1MB, mantemos o sistema atual para ser instantâneo
-    if (file.size <= 1048576) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        sendMessage(undefined, type, reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // PROTOCOLO DRIVE: Para ficheiros até 10MB
-      setError(`Ficheiro de ${(file.size / 1024 / 1024).toFixed(1)}MB detetado. A iniciar upload para o Drive...`);
-      
-      try {
-        // Aqui chamaremos a função que vamos criar com a tua chave JSON
-        // Por agora, apenas preparamos o terreno
-        console.log("Iniciando upload pesado para o Drive...");
-        
-        // TODO: Implementar a chamada ao backend/cloud function
-      } catch (err) {
-        setError("Erro no upload para o Drive. Tenta um ficheiro menor.");
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      // In a real app, upload to Firebase Storage. Using base64 for prototype.
+      if (base64String.length > 1048487) {
+        setError("Arquivo muito grande! O limite é ~1MB para esta versão.");
+        setTimeout(() => setError(''), 3000);
+        return;
       }
-      
-      setTimeout(() => setError(''), 4000);
-    }
+      sendMessage(undefined, type, base64String);
+    };
+    reader.readAsDataURL(file);
   };
 
   const startRecording = async () => {
@@ -449,15 +438,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop();
       setRecording(false);
-    }
-  };
-
-  
-  const toggleRecording = () => {
-    if (recording) {
-      stopRecording();
-    } else {
-      startRecording();
     }
   };
 
@@ -746,21 +726,19 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         </form>
 
         {newMessage.trim() ? (
-        <button onClick={(e) => sendMessage(e, 'text')} className="p-3 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm transition-colors">
-        <Send size={20} className="ml-1" />
-      </button>
-    ) : (
-      <button 
-        onClick={toggleRecording}
-        className={`p-3 rounded-full shadow-lg transition-all duration-300 ${
-          recording 
-            ? 'bg-red-600 text-white animate-pulse scale-110 shadow-red-200' 
-            : 'bg-emerald-400 text-gray-900 hover:bg-emerald-500'
-        }`}
-        title={recording ? "Clique para parar e enviar" : "Clique para gravar"}
-      >
-        {recording ? <Square size={20} fill="white" /> : <Mic size={20} />}
-      </button>
+          <button onClick={(e) => sendMessage(e, 'text')} className="p-3 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm transition-colors">
+            <Send size={20} className="ml-1" />
+          </button>
+        ) : (
+          <button 
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            className={`p-3 rounded-full shadow-sm transition-colors ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-400 text-gray-900 hover:bg-emerald-500'}`}
+          >
+            <Mic size={20} />
+          </button>
         )}
       </div>
     </div>

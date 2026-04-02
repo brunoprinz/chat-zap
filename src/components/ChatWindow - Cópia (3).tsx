@@ -452,15 +452,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     }
   };
 
-  
-  const toggleRecording = () => {
-    if (recording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
-
   const exportChatToHTML = () => {
     const htmlContent = `
       <!DOCTYPE html>
@@ -746,21 +737,19 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         </form>
 
         {newMessage.trim() ? (
-        <button onClick={(e) => sendMessage(e, 'text')} className="p-3 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm transition-colors">
-        <Send size={20} className="ml-1" />
-      </button>
-    ) : (
-      <button 
-        onClick={toggleRecording}
-        className={`p-3 rounded-full shadow-lg transition-all duration-300 ${
-          recording 
-            ? 'bg-red-600 text-white animate-pulse scale-110 shadow-red-200' 
-            : 'bg-emerald-400 text-gray-900 hover:bg-emerald-500'
-        }`}
-        title={recording ? "Clique para parar e enviar" : "Clique para gravar"}
-      >
-        {recording ? <Square size={20} fill="white" /> : <Mic size={20} />}
-      </button>
+          <button onClick={(e) => sendMessage(e, 'text')} className="p-3 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm transition-colors">
+            <Send size={20} className="ml-1" />
+          </button>
+        ) : (
+          <button 
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            className={`p-3 rounded-full shadow-sm transition-colors ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-400 text-gray-900 hover:bg-emerald-500'}`}
+          >
+            <Mic size={20} />
+          </button>
         )}
       </div>
     </div>
