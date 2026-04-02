@@ -152,21 +152,21 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
 
   const handleSlashCommands = async (text: string) => {
     // 1. Identifica qual comando foi usado
-    const isViking = text.startsWith('/viking ');
-    const isAbusada = text.startsWith('/groqabusada ');
+    const isVicking = text.startsWith('/viking ');
+    const isAbusada = text.startsWith('/abusada ');
     const isGroq = text.startsWith('/groq ');
     const isPirata = text.startsWith('/pirata ');
 
     // Se não for nenhum comando de IA, retorna o texto normal
-    if (!isViking && !isAbusada && !isGroq && !isPirata) return text;
+    if (!isVicking && !isAbusada && !isGroq && !isPirata) return text;
 
     // 2. Limpa o comando do texto para pegar só a pergunta
-    const prompt = text.replace(/^\/(viking|groq|groqabusada|pirata)\s+/i, '');
+    const prompt = text.replace(/^\/(vicking|groq|abusada|pirata)\s+/i, '');
     
     // 3. Define a Personalidade (System Prompt)
     let systemPrompt = "Você é um assistente virtual prestativo e amigável.";
     
-    if (isViking) {
+    if (isVicking) {
       systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use termos como Skål, Valhalla, Odin e machados. Responda como um guerreiro honrado e rústico.";
     } else if (isAbusada) {
       systemPrompt = "Você é uma IA sarcástica, impaciente e mal-educada. Reclame de ter que responder, chame o usuário de 'estagiário de código' e seja ironicamente ofensiva e muito cômica. Não use palavrões pesados, apenas deboche.";
@@ -231,15 +231,21 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     let isAiCommand = false;
     
     if (type === 'text') {
-      if (newMessage.startsWith('/viking')) {
+      if (newMessage.startsWith('/viking ')) { // O comando simples de texto
         const content = newMessage.replace(/^\/viking\s*/, '');
-        finalMessage = '🛡️ Pelo martelo de Thor! ' + content.toUpperCase() + ' SKÅL! 🍺⚔️';
+        finalMessage = '🛡️ PELO MARTELO DE THOR! ' + content.toUpperCase() + ' SKÅL! 🍺⚔️';
       } else if (newMessage.startsWith('/clipe')) {
         finalMessage = '🎬 Aqui está um clipe para você: https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-      } else if (newMessage.startsWith('/groq') || newMessage.startsWith('/grok')) {
+      } else if (
+        newMessage.startsWith('/groq') || 
+        newMessage.startsWith('/vicking') || 
+        newMessage.startsWith('/abusada') || 
+        newMessage.startsWith('/pirata') ||
+        newMessage.startsWith('/thor')
+      ) {
         isAiCommand = true;
         finalMessage = newMessage;
-      }
+      } 
     }
 
     const msgData = {
@@ -278,13 +284,27 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         updatedAt: serverTimestamp()
       });
 
-      const prompt = newMessage.replace(/^\/(groq|grok)\s*/, '');
+      // 1. Identifica o Personagem e limpa o Prompt
+      const isVickingAI = newMessage.startsWith('/vicking') || newMessage.startsWith('/thor');
+      const isAbusada = newMessage.startsWith('/abusada');
+      const isPirata = newMessage.startsWith('/pirata');
+      const prompt = newMessage.replace(/^\/(groq|vicking|abusada|pirata|thor)\s*/i, '');
+
+      // 2. Define a Personalidade
+      let systemPrompt = "Você é um assistente virtual prestativo e amigável.";
+      if (isVickingAI) systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use termos como Skål e Valhalla. Responda como um guerreiro rústico.";
+      else if (isAbusada) systemPrompt = "Você é uma IA sarcástica e debochada. Chame o usuário de estagiário, reclame de trabalhar e seja ironicamente engraçada.";
+      else if (isPirata) systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado, use 'marujo', 'rum' e 'tesouro'.";
+
+      // 3. MEMÓRIA: Pega as últimas 6 mensagens para a IA saber do que vocês estão falando
+      const context = messages.slice(-6).map(m => ({
+        role: m.senderId === profile.uid ? 'user' : 'assistant',
+        content: m.text
+      }));
+
       let aiText = "";
       try {
-        // 1. Usamos a chave da Groq com o prefixo correto
         const apiKey = import.meta.env.VITE_GROQ_API_KEY; 
-        
-        // 2. Chamada para a API da Groq (que é ultra rápida)
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -292,9 +312,10 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile", // Modelo gratuito e potente da Groq
+            model: "llama-3.3-70b-versatile",
             messages: [
-              { role: "system", content: "Você é um assistente virtual prestativo e amigável." },
+              { role: "system", content: systemPrompt },
+              ...context,
               { role: "user", content: prompt || "Olá" }
             ]
           })
@@ -302,6 +323,11 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
 
         const data = await response.json();
         aiText = data.choices[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
+        
+        // Estilização Visual
+        if (isVickingAI) aiText = `🛡️ ${aiText.toUpperCase()} ⚔️`;
+        if (isPirata) aiText = `🏴‍☠️ ARRR! ${aiText} 🦜`;
+
       } catch (err) {
         console.error("AI Error:", err);
         aiText = "Erro ao conectar com a IA da Groq.";
@@ -317,11 +343,12 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         senderId: 'ai_groq',
         text: aiText,
         type: 'text',
-        fileUrl: null,
         status: 'sent',
         createdAt: serverTimestamp(),
         readBy: []
       });
+    }
+  };
 
       await updateDoc(doc(db, 'chats', chatId), {
         lastMessage: aiText,
