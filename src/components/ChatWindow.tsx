@@ -297,34 +297,15 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
       const msgs: any[] = [];
       
-      snapshot.docs.forEach(docSnap => {
-        const msg = { id: docSnap.id, ...docSnap.data() } as any;
-        if (msg.createdAt) {
-          const msgDate = msg.createdAt.toDate();
-          if (msgDate < fifteenDaysAgo) {
-            deleteDoc(doc(db, 'chats', chatId, 'messages', msg.id)).catch(console.error);
-          } else {
-            msgs.push(msg);
-          }
-        } else {
-          msgs.push(msg);
-        }
-      });
-
-      // Lógica do Berrante
-      if (msgs.length > 0) {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
-          const audio = new Audio('https://github.com/wetainment/nudge/raw/main/nudge.mp3');
-          audio.play().catch(() => {});
-          setIsShaking(true);
-          setTimeout(() => setIsShaking(false), 500);
-        }
-      }
-
       setMessages(msgs);
       setTimeout(scrollToBottom, 100);
     });
+
+    return () => {
+      unsubscribeChat();
+      unsubscribeMessages();
+    };
+  }, [chatId, profile?.uid]);
 
   const handleDeleteGroup = async () => {
     if (!chatInfo || !profile) return;
@@ -339,18 +320,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       onBack();
     } catch (err) {
       setDeleteGroupError("Erro ao excluir grupo.");
-    }
-  };
-
-  //const playNudgeSound = () => {
-   // const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
-    //audio.play().catch(e => console.log('Audio play failed', e));
-    
-    // Shake effect
-    const chatContainer = document.getElementById('chat-container');
-    if (chatContainer) {
-      chatContainer.classList.add('animate-shake');
-      setTimeout(() => chatContainer.classList.remove('animate-shake'), 500);
     }
   };
 
