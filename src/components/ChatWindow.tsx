@@ -582,6 +582,12 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
             {otherTyping ? 'digitando...' : (chatInfo?.isOnline ? 'online' : '')}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+  <a href="https://drive.google.com" target="_blank" rel="noreferrer" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Abrir Google Drive">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" className="w-5 h-5" />
+  </a>
+  {/* Resto dos ícones do header */}
+  </div>
         <div className="flex items-center gap-2 relative">
           <button onClick={exportChatToHTML} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Exportar Chat (HTML)">
             <Download size={20} />
