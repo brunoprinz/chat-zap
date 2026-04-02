@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, deleteDoc, getDocs, arrayUnion } from 'firebase/firestore';
@@ -36,8 +36,8 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!chatId || !profile) return;
 
     // Play join sound when opening a chat
-    const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
-    joinAudio.play().catch(e => console.log('Audio play failed', e));
+    //const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+    //joinAudio.play().catch(e => console.log('Audio play failed', e));
 
     // Fetch chat info
     const chatRef = doc(db, 'chats', chatId);
@@ -233,18 +233,30 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       const prompt = newMessage.replace(/^\/(groq|grok)\s*/, '');
       let aiText = "";
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: prompt || "Olá",
-          config: {
-            systemInstruction: "Você é um assistente virtual prestativo e amigável."
-          }
+        // 1. Usamos a chave da Groq com o prefixo correto
+        const apiKey = import.meta.env.VITE_GROQ_API_KEY; 
+        
+        // 2. Chamada para a API da Groq (que é ultra rápida)
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile", // Modelo gratuito e potente da Groq
+            messages: [
+              { role: "system", content: "Você é um assistente virtual prestativo e amigável." },
+              { role: "user", content: prompt || "Olá" }
+            ]
+          })
         });
-        aiText = response.text || "Desculpe, não consegui gerar uma resposta.";
+
+        const data = await response.json();
+        aiText = data.choices[0]?.message?.content || "Desculpe, não consegui gerar uma resposta.";
       } catch (err) {
         console.error("AI Error:", err);
-        aiText = "Erro ao conectar com a IA.";
+        aiText = "Erro ao conectar com a IA da Groq.";
       }
 
       setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
@@ -379,16 +391,36 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          sendMessage(undefined, 'audio', base64String);
-        };
-        reader.readAsDataURL(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
+     mediaRecorder.onstop = () => {
+  // 1. Verifica se temos dados antes de tentar criar o Blob
+  if (audioChunksRef.current.length === 0) {
+    console.error("Nenhum dado de áudio capturado.");
+    return;
+  }
+
+  const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+  
+  // 2. Só prossegue se o áudio tiver um tamanho mínimo (evita o 0:00)
+  if (audioBlob.size < 100) { 
+    console.error("Áudio muito curto ou vazio.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    const base64String = reader.result as string;
+    // Envia o áudio
+    sendMessage(undefined, 'audio', base64String);
+    
+    // 3. LIMPEZA CRUCIAL: Reseta os chunks para a próxima gravação
+    audioChunksRef.current = [];
+  };
+  
+  reader.readAsDataURL(audioBlob);
+  
+  // 4. Desliga o microfone (libera a luzinha do navegador)
+  stream.getTracks().forEach(track => track.stop());
+};
 
       mediaRecorder.start();
       setRecording(true);
