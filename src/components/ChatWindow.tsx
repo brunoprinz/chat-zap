@@ -68,52 +68,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         }
       });
 
-      // --- INÍCIO DO CÓDIGO DO BERRANTE ---
-      if (msgs.length > 0) {
-        const lastMessage = msgs[msgs.length - 1];
-        // Se a última mensagem for 'nudge' e não for minha, toca o terror!
-        if (lastMessage.type === 'nudge' && lastMessage.senderId !== profile?.uid) {
-          const audio = new Audio('https://github.com/wetainment/nudge/raw/main/nudge.mp3');
-          audio.play().catch(e => console.log("Erro ao tocar som:", e));
-
-          setIsShaking(true);
-          setTimeout(() => setIsShaking(false), 500);
-        }
-      }
-      // --- FIM DO CÓDIGO DO BERRANTE ---
-      
-      setMessages(msgs);
-    });
-      
-      // Mark as read
-      msgs.forEach(msg => {
-        if (msg.senderId !== profile.uid && msg.status !== 'read') {
-          updateDoc(doc(db, 'chats', chatId, 'messages', msg.id), {
-            status: 'read',
-            readBy: [...(msg.readBy || []), profile.uid]
-          });
-        }
-      });
-    });
-
-    // Listen for typing indicators
-    const typingQ = query(
-      collection(db, 'chats', chatId, 'typing'),
-      where('isTyping', '==', true)
-    );
-    
-    const unsubscribeTyping = onSnapshot(typingQ, (snapshot) => {
-      const typers = snapshot.docs.filter(d => d.id !== profile.uid);
-      setOtherTyping(typers.length > 0);
-    });
-
-    return () => {
-      unsubscribeChat();
-      unsubscribeMessages();
-      unsubscribeTyping();
-    };
-  }, [chatId, profile]);
-
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
