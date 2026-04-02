@@ -108,28 +108,26 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     };
   }, [chatId, profile]);
 
-  // --- PROTOCOLO VIKING: CHAMAR ATENÇÃO (NUDGE) ---
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
+ // --- PROTOCOLO VIKING: CHAMAR ATENÇÃO (NUDGE) ---
+ useEffect(() => {
+  if (messages.length > 0) {
+    const lastMsg = messages[messages.length - 1];
+    
+    // Se a última mensagem for 'nudge' e NÃO foi você quem mandou
+    if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) { 
       
-      // Se a última mensagem for 'nudge' e você ainda não ouviu/viu esse tremor
-if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) { 
-  // ... lógica do som e tremor
-}
-        
-        // 1. Toca o Hino Viking do seu GitHub
-        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
-        audio.play().catch(e => console.log("Áudio bloqueado pelo navegador. Clique na tela uma vez!", e));
-        
-        // 2. Faz a tela tremer
-        setIsShaking(true);
-        
-        // 3. Para de tremer após 1.5 segundos
-        setTimeout(() => setIsShaking(false), 1500);
-      }
-    }
-  }, [messages, profile?.uid]);
+      // 1. Toca o Hino Viking do seu GitHub
+      const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
+      audio.play().catch(e => console.log("Áudio bloqueado. Clique na tela!", e));
+      
+      // 2. Faz a tela tremer
+      setIsShaking(true);
+      
+      // 3. Para de tremer após 1.5 segundos
+      setTimeout(() => setIsShaking(false), 1500);
+    } // <--- ESTA CHAVE FECHA O IF (O SEU ESTAVA FECHANDO LÁ EM CIMA)
+  } // <--- ESTA CHAVE FECHA O IF (messages.length)
+}, [messages, profile?.uid]); // <--- ESTA FECHA O USEEFFECT
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
