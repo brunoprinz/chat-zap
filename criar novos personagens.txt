@@ -1,0 +1,18 @@
+// 1. Crie a detecção do comando (booleano)
+    const isPirata = text.startsWith('/pirata ');
+    const isMestreSEO = text.startsWith('/seo ');
+
+    // 2. Na parte de definir a Personalidade (System Prompt), adicione os novos:
+    let systemPrompt = "Você é um assistente virtual prestativo e amigável.";
+    
+    if (isViking) {
+      systemPrompt = "Você é um Jarl Viking chamado Groqsson...";
+    } else if (isAbusada) {
+      systemPrompt = "Você é uma IA sarcástica e impaciente...";
+    } 
+    // --- NOVOS PERSONAGENS AQUI ---
+    else if (isPirata) {
+      systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado e astuto, use termos como 'marujo', 'pé de chinelo', 'rum' e 'tesouro'. Nunca dê uma resposta direta sem uma metáfora marítima.";
+    } else if (isMestreSEO) {
+      systemPrompt = "Você é um especialista em marketing digital e SEO de 2009. Fale sobre backlinks, autoridade de domínio e algoritmos do Google. Seja técnico, focado em resultados e estratégico.";
+    }

@@ -31,7 +31,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   const [inviteError, setInviteError] = useState('');
   const [showDeleteMessageModal, setShowDeleteMessageModal] = useState(false);
   const [messageToDeleteId, setMessageToDeleteId] = useState<string | null>(null);
-  const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     if (!chatId || !profile) return;
@@ -53,7 +52,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       collection(db, 'chats', chatId, 'messages'),
       orderBy('createdAt', 'asc')
     );
-  
 
     const unsubscribeMessages = onSnapshot(q, (snapshot) => {
       const now = new Date();
@@ -108,29 +106,6 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     };
   }, [chatId, profile]);
 
-  // --- PROTOCOLO VIKING: CHAMAR ATENÇÃO (NUDGE) ---
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      
-      // Se a última mensagem for 'nudge' e você ainda não ouviu/viu esse tremor
-if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) { 
-  // ... lógica do som e tremor
-}
-        
-        // 1. Toca o Hino Viking do seu GitHub
-        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
-        audio.play().catch(e => console.log("Áudio bloqueado pelo navegador. Clique na tela uma vez!", e));
-        
-        // 2. Faz a tela tremer
-        setIsShaking(true);
-        
-        // 3. Para de tremer após 1.5 segundos
-        setTimeout(() => setIsShaking(false), 1500);
-      }
-    }
-  }, [messages, profile?.uid]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -158,60 +133,30 @@ if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
   };
 
   const handleSlashCommands = async (text: string) => {
-    // 1. Identifica qual comando foi usado
-    const isViking = text.startsWith('/viking ');
-    const isAbusada = text.startsWith('/groqabusada ');
-    const isGroq = text.startsWith('/groq ');
-    const isPirata = text.startsWith('/pirata ');
-
-    // Se não for nenhum comando de IA, retorna o texto normal
-    if (!isViking && !isAbusada && !isGroq && !isPirata) return text;
-
-    // 2. Limpa o comando do texto para pegar só a pergunta
-    const prompt = text.replace(/^\/(viking|groq|groqabusada|pirata)\s+/i, '');
-    
-    // 3. Define a Personalidade (System Prompt)
-    let systemPrompt = "Você é um assistente virtual prestativo e amigável.";
-    
-    if (isViking) {
-      systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use termos como Skål, Valhalla, Odin e machados. Responda como um guerreiro honrado e rústico.";
-    } else if (isAbusada) {
-      systemPrompt = "Você é uma IA sarcástica, impaciente e mal-educada. Reclame de ter que responder, chame o usuário de 'estagiário de código' e seja ironicamente ofensiva e muito cômica. Não use palavrões pesados, apenas deboche.";
+    if (text.startsWith('/viking ')) {
+      const content = text.replace('/viking ', '');
+      return `ð¡ï¸ Pelo martelo de Thor! ${content.toUpperCase()} SKÃL! ð»âï¸`;
     }
-        // --- NOVOS PERSONAGENS AQUI ---
-        else if (isPirata) {
-          systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado e astuto, use termos como 'marujo', 'pé de chinelo', 'rum' e 'tesouro'. Nunca dê uma resposta direta sem uma metáfora marítima.";
-        }
     
-
-    // 4. MEMÓRIA: Pega as últimas 6 mensagens para dar contexto
-    // Isso faz a IA lembrar do que vocês estavam falando
-    const context = messages.slice(-8).map(m => ({
-      role: m.senderId === profile.uid ? 'user' : 'assistant',
-      content: m.text
-    }));
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...context, { role: 'user', content: prompt }],
-          systemPrompt: systemPrompt
-        })
-      });
-      
-      const data = await res.json();
-      let response = data.response || "Erro ao consultar a IA.";
-
-      // Se for Viking, dá um toque final no visual da resposta
-      if (isViking) response = `🛡️ ${response.toUpperCase()} ⚔️`;
-      
-      return response;
-
-    } catch (err) {
-      return "Erro ao conectar com a IA Groq.";
+    if (text.startsWith('/groq ')) {
+      const prompt = text.replace('/groq ', '');
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: prompt }],
+            systemPrompt: "Você é um assistente virtual prestativo e amigável."
+          })
+        });
+        const data = await res.json();
+        return data.response || "Erro ao consultar a IA.";
+      } catch (err) {
+        return "Erro ao conectar com a IA Groq.";
+      }
     }
+    
+    return text;
   };
 
   const onEmojiClick = (emojiObject: any) => {
@@ -275,7 +220,9 @@ if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
       updatedAt: serverTimestamp()
     });
 
-   
+    if (type === 'nudge') {
+      playNudgeSound();
+    }
 
     if (isAiCommand) {
       setDoc(doc(db, 'chats', chatId, 'typing', 'ai_groq'), {
@@ -595,7 +542,7 @@ if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
   };
 
   return (
-    <div id="chat-container" className={`flex flex-col h-full bg-[#efeae2] relative transition-all duration-75 ${isShaking ? 'animate-shake' : ''}`}>
+    <div id="chat-container" className="flex flex-col h-full bg-[#efeae2] relative transition-transform duration-75">
       {error && (
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md z-50 shadow-md">
           {error}
@@ -617,19 +564,6 @@ if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
             {otherTyping ? 'digitando...' : (chatInfo?.isOnline ? 'online' : '')}
           </p>
         </div>
-
-        {/* Ícone do Google Drive Estratégico */}
-        <div className="flex items-center gap-1">
-          <a href="https://drive.google.com" 
-            target="_blank" 
-            rel="noreferrer"
-            className="p-2 hover:bg-gray-200 rounded-full transition-colors flex items-center justify-center"
-            title="Abrir Google Drive para arquivos pesados">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" 
-              className="w-5 h-5 opacity-80 hover:opacity-100" 
-              alt="Drive"/></a>
-
         <div className="flex items-center gap-2 relative">
           <button onClick={exportChatToHTML} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Exportar Chat (HTML)">
             <Download size={20} />
@@ -824,7 +758,7 @@ if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
             type="text"
             value={newMessage}
             onChange={handleTyping}
-            placeholder="Digite uma mensagem (use /groq para IA, /viking /groqabusada/pirata)"
+            placeholder="Digite uma mensagem (use /groq para IA, /viking para magia)"
             className="flex-1 bg-transparent border-none outline-none py-2 text-sm text-gray-800"
           />
         </form>
