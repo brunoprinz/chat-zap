@@ -636,38 +636,59 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           {error}
         </div>
       )}
-      {/* Chat Header */}
-      <div className="flex items-center p-3 bg-gray-100 border-b border-gray-200 shadow-sm z-10">
-        <button onClick={onBack} className="mr-2 md:hidden p-2 text-gray-600 hover:bg-gray-200 rounded-full">
+     {/* Chat Header Responsivo Corrigido - Substitua o bloco anterior por este */}
+     <div className="flex items-center p-2 md:p-3 bg-gray-100 border-b border-gray-200 shadow-sm z-10 w-full min-w-0">
+        <button onClick={onBack} className="mr-1 md:hidden p-2 text-gray-600 hover:bg-gray-200 rounded-full flex-shrink-0">
           <ArrowLeft size={20} />
         </button>
+        
         <img 
           src={chatInfo?.photoURL || `https://picsum.photos/seed/${chatId}/40/40`} 
           alt="Chat" 
-          className="w-10 h-10 rounded-full object-cover"
+          className="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0"
         />
-        <div className="ml-3 flex-1">
-          <h2 className="text-base font-semibold text-gray-800">{chatInfo?.name || 'Chat'}</h2>
-          <p className="text-xs text-emerald-600">
+        
+        <div className="ml-2 md:ml-3 flex-1 min-w-0">
+          <h2 className="text-sm md:text-base font-semibold text-gray-800 truncate leading-tight">
+            {chatInfo?.name || 'Chat'}
+          </h2>
+          <p className="text-[10px] md:text-xs text-emerald-600 truncate">
             {otherTyping ? 'digitando...' : (chatInfo?.isOnline ? 'online' : '')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-  <a href="https://drive.google.com" target="_blank" rel="noreferrer" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Abrir Google Drive">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" className="w-5 h-5" />
-  </a>
-  {/* Resto dos ícones do header */}
-  </div>
-        <div className="flex items-center gap-2 relative">
-          <button onClick={exportChatToHTML} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Exportar Chat (HTML)">
-            <Download size={20} />
+
+        {/* Agrupamento de botões - flex-shrink-0 impede que sumam no J8 */}
+        <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0 ml-1">
+          <a 
+            href="https://drive.google.com" 
+            target="_blank" 
+            rel="noreferrer" 
+            className="p-1.5 md:p-2 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0" 
+            title="Abrir Google Drive"
+          >
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" className="w-5 h-5" alt="Drive" />
+          </a>
+          
+          <button 
+            onClick={exportChatToHTML} 
+            className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full flex-shrink-0" 
+            title="Exportar Chat"
+          >
+            <Download size={18} />
           </button>
-          <button onClick={() => sendMessage(undefined, 'nudge')} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Chamar Atenção">
-            <BellRing size={20} />
+          
+          <button 
+            onClick={() => sendMessage(undefined, 'nudge')} 
+            className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full flex-shrink-0" 
+            title="Berrante"
+          >
+            <BellRing size={18} />
           </button>
+
+          {/* Menu de Grupo Preservado */}
           {chatInfo?.type === 'group' && (
-            <>
-              <button onClick={() => setShowChatMenu(!showChatMenu)} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full">
+            <div className="relative flex-shrink-0">
+              <button onClick={() => setShowChatMenu(!showChatMenu)} className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full">
                 <MoreVertical size={20} />
               </button>
               {showChatMenu && (
@@ -682,7 +703,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
                   )}
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -818,25 +839,25 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area Corrigida e Responsiva */}
+      {/* Input Area Responsiva Blindada - Substitua o anterior por este */}
       {editingMessageId && (
         <div className="px-4 py-2 bg-emerald-50 border-t border-emerald-100 flex justify-between items-center text-sm text-emerald-800">
           <span>Editando mensagem...</span>
-          <button onClick={() => { setEditingMessageId(null); setNewMessage(''); }} className="p-1 hover:bg-emerald-100 rounded-full">
+          <button onClick={() => { setEditingMessageId(null); setNewMessage(''); }} className="p-1 hover:bg-emerald-100 rounded-full flex-shrink-0">
             <X size={16} />
           </button>
         </div>
       )}
 
-      <div className="p-2 md:p-3 bg-gray-100 flex items-center gap-1 md:gap-2 z-10 relative border-t border-gray-200">
+      <div className="p-2 md:p-3 bg-gray-100 flex items-center gap-1 md:gap-2 z-10 relative border-t border-gray-200 w-full overflow-hidden">
         {showEmojiPicker && (
           <div className="absolute bottom-16 left-2 z-50 shadow-xl rounded-lg max-w-[90vw]">
             <EmojiPicker onEmojiClick={onEmojiClick} width="100%" />
           </div>
         )}
         
-        {/* Agrupador de ícones da esquerda */}
-        <div className="flex items-center">
+        {/* Agrupador de ícones da esquerda - flex-shrink-0 trava eles no lugar */}
+        <div className="flex items-center flex-shrink-0">
           <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full">
             <Smile size={22} />
           </button>
@@ -852,7 +873,8 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           </label>
         </div>
 
-        <form onSubmit={(e) => sendMessage(e, 'text')} className="flex-1 flex items-center bg-white rounded-full px-3 py-1 shadow-inner border border-gray-200 min-w-0">
+        {/* Formulário - min-w-0 e flex-1 permitem que ele se esprema se necessário */}
+        <form onSubmit={(e) => sendMessage(e, 'text')} className="flex-1 min-w-0 flex items-center bg-white rounded-full px-3 py-1 shadow-inner border border-gray-200 overflow-hidden">
           <input
             type="text"
             value={newMessage}
@@ -862,16 +884,16 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
           />
         </form>
 
-        {/* Lado Direito: Envio/Mic + Berrante */}
-        <div className="flex items-center gap-1">
+        {/* Lado Direito: Envio/Mic + Berrante - flex-shrink-0 garante que apareçam no celular */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           {newMessage.trim() ? (
-            <button onClick={(e) => sendMessage(e, 'text')} className="p-2.5 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm">
+            <button onClick={(e) => sendMessage(e, 'text')} className="p-2.5 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm flex-shrink-0">
               <Send size={18} className="ml-0.5" />
             </button>
           ) : (
             <button 
               onClick={toggleRecording}
-              className={`p-2.5 rounded-full shadow-md transition-all ${
+              className={`p-2.5 rounded-full shadow-md transition-all flex-shrink-0 ${
                 recording ? 'bg-red-600 text-white animate-pulse' : 'bg-emerald-400 text-gray-900'
               }`}
             >
@@ -879,11 +901,11 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
             </button>
           )}
           
-          <button onClick={() => sendMessage(undefined, 'nudge')} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full">
+          <button onClick={() => sendMessage(undefined, 'nudge')} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full flex-shrink-0">
             <BellRing size={20} />
           </button>
         </div>
       </div>
-    </div> // Esta div fecha o container principal que você tem no ChatWindow
+    </div> // Esta div fecha o container principal
   );
 }
