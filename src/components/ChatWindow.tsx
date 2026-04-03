@@ -37,8 +37,8 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!chatId || !profile) return;
 
     // Play join sound when opening a chat
-    const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
-    joinAudio.play().catch(e => console.log('Audio play failed', e));
+    //const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+    //joinAudio.play().catch(e => console.log('Audio play failed', e));
 
     // Fetch chat info
     const chatRef = doc(db, 'chats', chatId);
@@ -806,61 +806,72 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         <div ref={messagesEndRef} />
       </div>
 
-{/* Input Area Responsiva */}
-<div className="p-2 md:p-3 bg-gray-100 flex items-center gap-1 md:gap-2 z-10 relative border-t border-gray-200">
-  {showEmojiPicker && (
-    <div className="absolute bottom-16 left-2 z-50 shadow-xl rounded-lg max-w-[90vw]">
-      <EmojiPicker onEmojiClick={onEmojiClick} width="100%" />
-    </div>
-  )}
-  
-  {/* Agrupador de ícones da esquerda para economizar espaço */}
-  <div className="flex items-center">
-    <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full">
-      <Smile size={22} />
-    </button>
-    
-    <label className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full cursor-pointer">
-      <Paperclip size={22} />
-      <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
-    </label>
-    
-    <label className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full cursor-pointer">
-      <ImageIcon size={22} />
-      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
-    </label>
-  </div>
+      {/* Input Area Corrigida e Responsiva */}
+      {editingMessageId && (
+        <div className="px-4 py-2 bg-emerald-50 border-t border-emerald-100 flex justify-between items-center text-sm text-emerald-800">
+          <span>Editando mensagem...</span>
+          <button onClick={() => { setEditingMessageId(null); setNewMessage(''); }} className="p-1 hover:bg-emerald-100 rounded-full">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
-  <form onSubmit={(e) => sendMessage(e, 'text')} className="flex-1 flex items-center bg-white rounded-full px-3 py-1 shadow-inner border border-gray-200 min-w-0">
-    <input
-      type="text"
-      value={newMessage}
-      onChange={handleTyping}
-      placeholder="Mensagem..."
-      className="flex-1 bg-transparent border-none outline-none py-2 text-sm text-gray-800 min-w-0"
-    />
-  </form>
+      <div className="p-2 md:p-3 bg-gray-100 flex items-center gap-1 md:gap-2 z-10 relative border-t border-gray-200">
+        {showEmojiPicker && (
+          <div className="absolute bottom-16 left-2 z-50 shadow-xl rounded-lg max-w-[90vw]">
+            <EmojiPicker onEmojiClick={onEmojiClick} width="100%" />
+          </div>
+        )}
+        
+        {/* Agrupador de ícones da esquerda */}
+        <div className="flex items-center">
+          <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full">
+            <Smile size={22} />
+          </button>
+          
+          <label className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full cursor-pointer">
+            <Paperclip size={22} />
+            <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'file')} />
+          </label>
+          
+          <label className="p-1.5 md:p-2 text-gray-500 hover:bg-gray-200 rounded-full cursor-pointer">
+            <ImageIcon size={22} />
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileUpload(e, 'image')} />
+          </label>
+        </div>
 
-  {/* Botão de Envio/Microfone sempre visível à direita */}
-  <div className="flex items-center gap-1">
-    {newMessage.trim() ? (
-      <button onClick={(e) => sendMessage(e, 'text')} className="p-2.5 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm">
-        <Send size={18} className="ml-0.5" />
-      </button>
-    ) : (
-      <button 
-        onClick={toggleRecording}
-        className={`p-2.5 rounded-full shadow-md transition-all ${
-          recording ? 'bg-red-600 text-white animate-pulse' : 'bg-emerald-400 text-gray-900'
-        }`}
-      >
-        {recording ? <Square size={18} fill="white" /> : <Mic size={18} />}
-      </button>
-    )}
-    
-    {/* Botão de Nudge (Berrante) para acesso rápido */}
-    <button onClick={() => sendMessage(undefined, 'nudge')} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full" title="Chamar Atenção">
-      <BellRing size={20} />
-    </button>
-  </div>
-</div>
+        <form onSubmit={(e) => sendMessage(e, 'text')} className="flex-1 flex items-center bg-white rounded-full px-3 py-1 shadow-inner border border-gray-200 min-w-0">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={handleTyping}
+            placeholder="Mensagem..."
+            className="flex-1 bg-transparent border-none outline-none py-2 text-sm text-gray-800 min-w-0"
+          />
+        </form>
+
+        {/* Lado Direito: Envio/Mic + Berrante */}
+        <div className="flex items-center gap-1">
+          {newMessage.trim() ? (
+            <button onClick={(e) => sendMessage(e, 'text')} className="p-2.5 bg-emerald-400 text-gray-900 rounded-full hover:bg-emerald-500 shadow-sm">
+              <Send size={18} className="ml-0.5" />
+            </button>
+          ) : (
+            <button 
+              onClick={toggleRecording}
+              className={`p-2.5 rounded-full shadow-md transition-all ${
+                recording ? 'bg-red-600 text-white animate-pulse' : 'bg-emerald-400 text-gray-900'
+              }`}
+            >
+              {recording ? <Square size={18} fill="white" /> : <Mic size={18} />}
+            </button>
+          )}
+          
+          <button onClick={() => sendMessage(undefined, 'nudge')} className="p-2 text-gray-500 hover:bg-gray-200 rounded-full">
+            <BellRing size={20} />
+          </button>
+        </div>
+      </div>
+    </div> // Esta div fecha o container principal que você tem no ChatWindow
+  );
+}
