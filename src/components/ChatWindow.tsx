@@ -32,13 +32,14 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   const [showDeleteMessageModal, setShowDeleteMessageModal] = useState(false);
   const [messageToDeleteId, setMessageToDeleteId] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   useEffect(() => {
     if (!chatId || !profile) return;
 
     // Play join sound when opening a chat
-    //const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
-    //joinAudio.play().catch(e => console.log('Audio play failed', e));
+    const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+    joinAudio.play().catch(e => console.log('Audio play failed', e));
 
     // Fetch chat info
     const chatRef = doc(db, 'chats', chatId);
@@ -112,7 +113,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       const lastMsg = messages[messages.length - 1];
       
       if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
-        const audio = new Audio('/nudge.mp3');
+        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
         audio.volume = 1.0; // Garante o som alto
         audio.preload = 'auto';
         
@@ -127,7 +128,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   }, [messages, profile?.uid]);
 
   const enableAudio = () => {
-    const audio = new Audio('/nudge.mp3');
+    const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
     audio.volume = 0; // Toca mudo só para o navegador liberar o canal
     audio.play().then(() => {
       setAudioEnabled(true);
@@ -288,7 +289,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       updatedAt: serverTimestamp()
     });
 
-    if (type === 'nudge') {
+    //if (type === 'nudge') {
       playNudgeSound();
     }
 
@@ -438,7 +439,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   };
 
   const playNudgeSound = () => {
-    const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
+    const audio = new Audio('/nudge.mp3'); // Placeholder nudge sound
     audio.play().catch(e => console.log('Audio play failed', e));
     
     // Shake effect
