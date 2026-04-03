@@ -290,7 +290,7 @@ export default function Sidebar({ activeChatId, setActiveChatId, onOpenSettings 
                       ) : (
                         <button 
                           onClick={() => joinGroup(group.id)}
-                          className="px-3 py-1.5 text-sm text-white bg-emerald-400 hover:bg-emerald-500 rounded-lg font-bold shadow-sm transition-all active:scale-95"
+                          className="px-6 py-2 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg shadow-md"
                         >
                           ENTRAR
                         </button>
@@ -300,13 +300,14 @@ export default function Sidebar({ activeChatId, setActiveChatId, onOpenSettings 
                 })
               )}
             </div>
+            
             <div className="flex justify-end">
               <button onClick={() => setShowExploreGroupsModal(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">Fechar</button>
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
         {chats.filter(c => c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || c.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())).map(chat => (
