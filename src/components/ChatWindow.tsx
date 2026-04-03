@@ -114,13 +114,11 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       
       if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
         const audio = new Audio('/nudge.mp3');
-
-        // Configurações para garantir que o mobile entenda
+        audio.volume = 1.0; // Garante o som alto
         audio.preload = 'auto';
-        audio.load(); 
         
         audio.play().catch(e => {
-          console.log("O celular barrou o som. Ela precisa clicar na tela uma vez!", e);
+          console.log("Navegador mobile bloqueou o som automático.", e);
         });
         
         setIsShaking(true);
@@ -291,7 +289,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       updatedAt: serverTimestamp()
     });
 
-    if (type === 'nudge') {
+    //if (type === 'nudge') {
       playNudgeSound();
     }
 
@@ -441,7 +439,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   };
 
   const playNudgeSound = () => {
-    const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
+    const audio = new Audio('/nudge.mp3'); // Placeholder nudge sound
     audio.play().catch(e => console.log('Audio play failed', e));
     
     // Shake effect
