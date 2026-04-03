@@ -32,13 +32,14 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   const [showDeleteMessageModal, setShowDeleteMessageModal] = useState(false);
   const [messageToDeleteId, setMessageToDeleteId] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   useEffect(() => {
     if (!chatId || !profile) return;
 
     // Play join sound when opening a chat
-    //const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
-    //joinAudio.play().catch(e => console.log('Audio play failed', e));
+    const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+    joinAudio.play().catch(e => console.log('Audio play failed', e));
 
     // Fetch chat info
     const chatRef = doc(db, 'chats', chatId);
@@ -111,18 +112,31 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       
-      // Se a mensagem for um Nudge e NÃO for minha
-      if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile.uid) {
-        // LINK DO SEU GITHUB AQUI
-        const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
-        audio.play().catch(e => console.log("Erro ao tocar audio:", e));
+      if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
+        const audio = new Audio('/nudge.mp3');
+
+        // Configurações para garantir que o mobile entenda
+        audio.preload = 'auto';
+        audio.load(); 
         
-        // Faz a tela tremer
+        audio.play().catch(e => {
+          console.log("O celular barrou o som. Ela precisa clicar na tela uma vez!", e);
+        });
+        
         setIsShaking(true);
         setTimeout(() => setIsShaking(false), 800);
       }
     }
-  }, [messages]);
+  }, [messages, profile?.uid]);
+
+  const enableAudio = () => {
+    const audio = new Audio('/nudge.mp3');
+    audio.volume = 0; // Toca mudo só para o navegador liberar o canal
+    audio.play().then(() => {
+      setAudioEnabled(true);
+      console.log("Áudio liberado!");
+    }).catch(e => console.log("Ainda bloqueado", e));
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
