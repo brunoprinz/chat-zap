@@ -265,7 +265,7 @@ export default function Sidebar({ activeChatId, setActiveChatId, onOpenSettings 
         </div>
       )}
 
-      {showExploreGroupsModal && (
+{showExploreGroupsModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl max-h-[80vh] flex flex-col">
             <h3 className="text-lg font-semibold mb-4 text-gray-900">Explorar Grupos Públicos</h3>
@@ -274,21 +274,25 @@ export default function Sidebar({ activeChatId, setActiveChatId, onOpenSettings 
                 <p className="text-gray-500 text-center py-4">Nenhum grupo público encontrado.</p>
               ) : (
                 publicGroups.map(group => {
-                  const isMember = group.participants?.includes(profile?.uid);
+                  // AQUI ESTÁ O SEGREDO: Se não existir a lista, criamos uma vazia na hora
+                  const pList = group.participants || [];
+                  const mList = group.members || [];
+                  const isMember = pList.includes(profile?.uid) || mList.includes(profile?.uid);
+
                   return (
                     <div key={group.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
                       <div>
                         <h4 className="font-medium text-gray-900">{group.name}</h4>
-                        <p className="text-xs text-gray-500">{group.participants?.length || 0} participantes</p>
+                        <p className="text-xs text-gray-500">{(pList.length || mList.length || 0)} participantes</p>
                       </div>
                       {isMember ? (
                         <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">Membro</span>
                       ) : (
                         <button 
                           onClick={() => joinGroup(group.id)}
-                          className="px-3 py-1.5 text-sm text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg font-medium"
+                          className="px-3 py-1.5 text-sm text-white bg-emerald-400 hover:bg-emerald-500 rounded-lg font-bold shadow-sm transition-all active:scale-95"
                         >
-                          Entrar
+                          ENTRAR
                         </button>
                       )}
                     </div>
@@ -297,12 +301,12 @@ export default function Sidebar({ activeChatId, setActiveChatId, onOpenSettings 
               )}
             </div>
             <div className="flex justify-end">
-              <button onClick={() => setShowExploreGroupsModal(false)} className="px-4 py-2 text-gray-900 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium">Fechar</button>
+              <button onClick={() => setShowExploreGroupsModal(false)} className="px-4 py-2 text-sm font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">Fechar</button>
             </div>
           </div>
         </div>
       )}
-
+      
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
         {chats.filter(c => c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || c.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())).map(chat => (
