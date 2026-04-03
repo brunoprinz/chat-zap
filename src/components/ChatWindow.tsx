@@ -111,15 +111,18 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       
-      // Se a mensagem for um Nudge e NÃO for minha
-      if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile.uid) {
-        // LINK DO SEU GITHUB AQUI
+      if (lastMsg.type === 'nudge' && lastMsg.senderId !== profile?.uid) {
         const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3');
-        audio.volume = 1.0; // Garante o som alto
-        audio.preload = 'auto';
-        audio.play().catch(e => console.log("Erro ao tocar audio:", e));
         
-        // Faz a tela tremer
+        // Forçamos o navegador a "preparar" o áudio
+        audio.load();
+        audio.volume = 1.0;
+  
+        // O truque: tentamos tocar. Se o navegador mobile barrar, ele avisa no console.
+        audio.play().catch(e => {
+          console.log("Navegador mobile bloqueou o som. Ela precisa interagir com a tela!", e);
+        });
+        
         setIsShaking(true);
         setTimeout(() => setIsShaking(false), 800);
       }
@@ -438,7 +441,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
   };
 
   const playNudgeSound = () => {
-    const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3'); // Placeholder nudge sound
+    const audio = new Audio('https://github.com/brunoprinz/chat-zap/raw/refs/heads/main/nudge.mp3'); // Placeholder nudge sound
     audio.play().catch(e => console.log('Audio play failed', e));
     
     // Shake effect
