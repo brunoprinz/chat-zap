@@ -442,48 +442,60 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Se for menor que 1MB, mantemos o sistema atual para ser instantâneo
-    // Se for pequeno, mantém o envio rápido via Firebase (Base64)
-    if (file.size <= 1048576) {
+    // Lógica de Compressão Nativa para Imagens
+    if (type === 'image') {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        sendMessage(undefined, type, reader.result as string);
-      };
       reader.readAsDataURL(file);
-    } 
-    // PROTOCOLO DRIVE: Para ficheiros maiores que 1MB
-    else {
-      setError(`Ficheiro de ${(file.size / 1024 / 1024).toFixed(1)}MB detetado. Enviando para o Drive...`);
-      
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // Chamada para a sua nova Function no Cloudflare
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) throw new Error('Falha no servidor');
-
-        const data = await response.json();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
         
-        if (data.fileUrl) {
-          // Envia o link do Google Drive para o Chat
-          sendMessage(undefined, 'file', data.fileUrl);
-          setError(""); 
-        }
-      } catch (err) {
-        console.error("Erro no Drive:", err);
-        setError("Erro no upload para o Drive. Tente novamente.");
-      }
-      
-   // ... seu código do catch anterior
-   setTimeout(() => setError(''), 4000);
-  }
-}; // <--- ESSA CHAVE FECHA A FUNÇÃO handleFileUpload
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
 
+          // Redimensionamento Inteligente (Mantém a proporção)
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // 0.7 de qualidade é o "ponto doce" entre nitidez e peso de arquivo
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // Envia a imagem já esmagada
+            sendMessage(undefined, 'image', compressedBase64);
+          }
+        };
+      };
+      return; // Interrompe aqui para não rodar o FileReader debaixo
+    }
+
+    // Se for arquivo (PDF, etc), envia sem comprimir
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      sendMessage(undefined, type, reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+  
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
