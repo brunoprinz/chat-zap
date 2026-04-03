@@ -139,10 +139,13 @@ export default function Sidebar({ activeChatId, setActiveChatId, onOpenSettings 
     if (!profile) return;
     try {
       await updateDoc(doc(db, 'chats', groupId), {
-        participants: arrayUnion(profile.uid)
+        // Atualizamos as duas listas para garantir que o grupo apareça na lateral
+        participants: arrayUnion(profile.uid),
+        members: arrayUnion(profile.uid) 
       });
       setShowExploreGroupsModal(false);
       setActiveChatId(groupId);
+      alert("Entrou no bando! Skål!"); // Um aviso pra você saber que funcionou
     } catch (error) {
       console.error("Error joining group:", error);
       alert("Erro ao entrar no grupo.");

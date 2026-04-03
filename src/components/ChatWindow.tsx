@@ -566,6 +566,21 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     }
   };
 
+ // 1. COLE AQUI a função de entrar no grupo
+ const handleJoinGroup = async (groupId: string) => {
+  try {
+    const groupRef = doc(db, 'chats', groupId);
+    await updateDoc(groupRef, {
+      members: arrayUnion(profile.uid) 
+    });
+    setShowExploreModal(false);
+    setChatId(groupId); 
+    alert("Você entrou no bando! Skål!");
+  } catch (error) {
+    console.error("Erro ao entrar:", error);
+  }
+};
+
   const exportChatToHTML = () => {
     const htmlContent = `
       <!DOCTYPE html>
