@@ -37,8 +37,8 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     if (!chatId || !profile) return;
 
     // Play join sound when opening a chat
-    //const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
-    //joinAudio.play().catch(e => console.log('Audio play failed', e));
+    const joinAudio = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+    joinAudio.play().catch(e => console.log('Audio play failed', e));
 
     // Fetch chat info
     const chatRef = doc(db, 'chats', chatId);
@@ -864,5 +864,3 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
     </button>
   </div>
 </div>
-  );
-}
