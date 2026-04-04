@@ -827,9 +827,15 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
                   
                   {msg.type === 'text' && (
                     <p className="text-sm text-gray-800 break-words whitespace-pre-wrap">
-                      {msg.text}
-                      {msg.isEdited && <span className="text-[10px] text-gray-500 italic ml-2">(Editado)</span>}
-                    </p>
+                    {msg.text.split(/(\s+)/).map((part, i) => {
+                      const urlRegex = /(https?:\/\/[^\s]+)/g;
+                      if (part.match(urlRegex)) {
+                        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">{part}</a>;
+                      }
+                      return part;
+                    })}
+                    {msg.isEdited && <span className="text-[10px] text-gray-500 italic ml-2">(Editado)</span>}
+                  </p>
                   )}
                   
                   {msg.type === 'image' && msg.fileUrl && (
