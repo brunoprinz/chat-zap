@@ -255,7 +255,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         newMessage.startsWith('/vicking') || 
         newMessage.startsWith('/abusada') || 
         newMessage.startsWith('/pirata') ||
-        newMessage.startsWith('/thor')
+        newMessage.startsWith('/thor') ||
         newMessage.startsWith('/claudia')
       ) {
         isAiCommand = true;
