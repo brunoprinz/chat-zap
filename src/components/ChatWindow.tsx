@@ -307,7 +307,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       const isVickingAI = newMessage.startsWith('/vicking') || newMessage.startsWith('/thor');
       const isAbusada = newMessage.startsWith('/abusada');
       const isPirata = newMessage.startsWith('/pirata');
-      const isClaudia = newMessage.startsWith('/pirata');
+      const isClaudia = newMessage.startsWith('/claudia');
       const prompt = newMessage.replace(/^\/(groq|vicking|abusada|pirata|thor|claudia)\s*/i, '');
 
       let systemPrompt = "Você é um assistente virtual prestativo.";
