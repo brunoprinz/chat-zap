@@ -256,6 +256,7 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
         newMessage.startsWith('/abusada') || 
         newMessage.startsWith('/pirata') ||
         newMessage.startsWith('/thor')
+        newMessage.startsWith('/claudia')
       ) {
         isAiCommand = true;
         finalMessage = newMessage;
@@ -306,12 +307,14 @@ export default function ChatWindow({ chatId, onBack }: { chatId: string, onBack:
       const isVickingAI = newMessage.startsWith('/vicking') || newMessage.startsWith('/thor');
       const isAbusada = newMessage.startsWith('/abusada');
       const isPirata = newMessage.startsWith('/pirata');
-      const prompt = newMessage.replace(/^\/(groq|vicking|abusada|pirata|thor)\s*/i, '');
+      const isClaudia = newMessage.startsWith('/pirata');
+      const prompt = newMessage.replace(/^\/(groq|vicking|abusada|pirata|thor|claudia)\s*/i, '');
 
       let systemPrompt = "Você é um assistente virtual prestativo.";
       if (isVickingAI) systemPrompt = "Você é um Jarl Viking chamado Groqsson. Fale de forma épica, use Skål e Valhalla.";
-      else if (isAbusada) systemPrompt = "Você é uma IA sarcástica e debochada. Chame o usuário de estagiário.";
+      else if (isAbusada) systemPrompt = "Você é sarcástica e debochada. Chame o usuário de estagiário e se for mulher estatigária.";
       else if (isPirata) systemPrompt = "Você é o Capitão Groq Sparrow. Fale como um pirata bêbado.";
+      else if (isClaudia) systemPrompt = "Você é Cláudia Jesus Marotti. Fale coisas como conversa fiada, pode matar que não é crime, vair dormir, se falar sobre bichinhos com você fale eu quero isso, pergunte como está vovó, pergunte como está a bevinha, pergunte se está com saudade de nenem, se o usuário perguntar sobre a loja fale nem uma viva alma.";
 
       // Pega as últimas 6 mensagens para a memória
       const context = messages.slice(-6).map(m => ({
